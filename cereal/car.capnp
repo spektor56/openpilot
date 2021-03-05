@@ -102,6 +102,11 @@ struct CarEvent @0x9b1657f34caf3ad3 {
     startupOneplus @82;
     processNotRunning @95;
 
+    manualSteeringRequired @96;
+    buttonSoftCancel @97;
+    silentPedalPressed @98;
+    silentButtonEnable @99;
+
     radarCanErrorDEPRECATED @15;
     radarCommIssueDEPRECATED @67;
     gasUnavailableDEPRECATED @3;
@@ -178,6 +183,12 @@ struct CarState {
 
   # clutch (manual transmission only)
   clutchPressed @28 :Bool;
+
+  lkasEnabled @37 :Bool;
+  accOn @38 :Bool;
+  leftBlinkerOn @39 :Bool;
+  rightBlinkerOn @40 :Bool;
+  disengageByBrake @41 :Bool;
 
   # which packets this state came from
   canMonoTimes @12: List(UInt64);

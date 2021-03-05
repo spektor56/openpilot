@@ -6,7 +6,7 @@ from common.realtime import DT_CTRL
 from selfdrive.swaglog import cloudlog
 from selfdrive.config import Conversions as CV
 from selfdrive.controls.lib.events import ET
-from selfdrive.car.honda.values import CruiseButtons, CAR, HONDA_BOSCH
+from selfdrive.car.honda.values import CruiseButtons, CruiseSetting, CAR, HONDA_BOSCH
 from selfdrive.car import STD_CARGO_KG, CivicParams, scale_rot_inertia, scale_tire_stiffness, gen_empty_fingerprint
 from selfdrive.controls.lib.longitudinal_planner import _A_CRUISE_MAX_V_FOLLOWING
 from selfdrive.car.interfaces import CarInterfaceBase
@@ -453,6 +453,11 @@ class CarInterface(CarInterfaceBase):
     ret.brakeLights = bool(self.CS.brake_switch or
                            c.actuators.brake > brakelights_threshold)
 
+    ret.lkasEnabled = self.CS.lkasEnabled
+    ret.accOn = self.CS.accOn
+    ret.leftBlinkerOn = self.CS.leftBlinkerOn
+    ret.rightBlinkerOn = self.CS.rightBlinkerOn
+
     buttonEvents = []
 
     if self.CS.cruise_buttons != self.CS.prev_cruise_buttons:
@@ -483,7 +488,7 @@ class CarInterface(CarInterfaceBase):
       else:
         be.pressed = False
         but = self.CS.prev_cruise_setting
-      if but == 1:
+      if but == CruiseSetting.LKAS_BUTTON:
         be.type = ButtonType.altButton1
       # TODO: more buttons?
       buttonEvents.append(be)
@@ -491,6 +496,8 @@ class CarInterface(CarInterfaceBase):
 
     # events
     events = self.create_common_events(ret, pcm_enable=False)
+    if not self.CS.lkasEnabled:
+      events.add(EventName.manualSteeringRequired)
     if self.CS.brake_error:
       events.add(EventName.brakeUnavailable)
     if self.CS.brake_hold and self.CS.CP.openpilotLongitudinalControl:
@@ -500,6 +507,8 @@ class CarInterface(CarInterfaceBase):
 
     if self.CP.enableCruise and ret.vEgo < self.CP.minEnableSpeed:
       events.add(EventName.belowEngageSpeed)
+
+    self.CS.disengageByBrake = self.CS.disengageByBrake or ret.disengageByBrake
 
     # it can happen that car cruise disables while comma system is enabled: need to
     # keep braking if needed or if the speed is very low
@@ -515,6 +524,17 @@ class CarInterface(CarInterfaceBase):
 
     cur_time = self.frame * DT_CTRL
     enable_pressed = False
+    enable_from_brake = False
+
+    if self.CS.disengageByBrake and not ret.brakePressed and self.CS.lkasEnabled:
+      self.last_enable_pressed = cur_time
+      enable_pressed = True
+      enable_from_brake = True
+
+    if not ret.brakePressed:
+      self.CS.disengageByBrake = False
+      ret.disengageByBrake = False
+
     # handle button presses
     for b in ret.buttonEvents:
 
@@ -523,9 +543,24 @@ class CarInterface(CarInterfaceBase):
         self.last_enable_pressed = cur_time
         enable_pressed = True
 
+      # do disable on LKAS button if ACC is disabled
+      if b.type in [ButtonType.altButton1] and b.pressed:
+        if not self.CS.lkasEnabled: #disabled LKAS
+          if self.CS.accOn:
+            events.add(EventName.buttonSoftCancel)
+          else:
+            events.add(EventName.buttonCancel)
+        else: #enabled LKAS
+          if not self.CS.accOn:
+            self.last_enable_pressed = cur_time
+            enable_pressed = True
+
       # do disable on button down
       if b.type == "cancel" and b.pressed:
-        events.add(EventName.buttonCancel)
+        if self.CS.lkasEnabled:
+          events.add(EventName.buttonSoftCancel)
+        else:
+          events.add(EventName.buttonCancel)
 
     if self.CP.enableCruise:
       # KEEP THIS EVENT LAST! send enable event if button is pressed and there are
@@ -536,10 +571,16 @@ class CarInterface(CarInterfaceBase):
           (cur_time - self.last_enable_sent) > 0.2 and
           ret.cruiseState.enabled) or \
          (enable_pressed and events.any(ET.NO_ENTRY)):
-        events.add(EventName.buttonEnable)
+        if enable_from_brake:
+          events.add(EventName.silentButtonEnable)
+        else:
+          events.add(EventName.buttonEnable)
         self.last_enable_sent = cur_time
     elif enable_pressed:
-      events.add(EventName.buttonEnable)
+      if enable_from_brake:
+        events.add(EventName.silentButtonEnable)
+      else:
+        events.add(EventName.buttonEnable)
 
     ret.events = events.to_msg()
 

@@ -165,6 +165,13 @@ class CarState(CarStateBase):
   def __init__(self, CP):
     super().__init__(CP)
     can_define = CANDefine(DBC[CP.carFingerprint]['pt'])
+
+    self.lkasEnabled = False
+    self.leftBlinkerOn = False
+    self.rightBlinkerOn = False
+    self.accOn = False
+    self.disengageByBrake = False
+
     self.shifter_values = can_define.dv["GEARBOX"]["GEAR_SHIFTER"]
     self.steer_status_values = defaultdict(lambda: "UNKNOWN", can_define.dv["STEER_STATUS"]["STEER_STATUS"])
 
@@ -235,6 +242,10 @@ class CarState(CarStateBase):
 
     ret.leftBlinker = cp.vl["SCM_FEEDBACK"]['LEFT_BLINKER'] != 0
     ret.rightBlinker = cp.vl["SCM_FEEDBACK"]['RIGHT_BLINKER'] != 0
+
+    self.leftBlinkerOn = cp.vl["SCM_FEEDBACK"]['LEFT_BLINKER'] != 0
+    self.rightBlinkerOn = cp.vl["SCM_FEEDBACK"]['RIGHT_BLINKER'] != 0
+
     self.brake_hold = cp.vl["VSA_STATUS"]['BRAKE_HOLD_ACTIVE']
 
     if self.CP.carFingerprint in (CAR.CIVIC, CAR.ODYSSEY, CAR.CRV_5G, CAR.ACCORD, CAR.ACCORD_15, CAR.ACCORDH, CAR.CIVIC_BOSCH,
@@ -300,6 +311,8 @@ class CarState(CarStateBase):
       self.brake_switch_ts = cp.ts["POWERTRAIN_DATA"]['BRAKE_SWITCH']
 
     ret.brake = cp.vl["VSA_STATUS"]['USER_BRAKE']
+
+    self.accOn = cp.vl["POWERTRAIN_DATA"]['ACC_STATUS'] != 0
     ret.cruiseState.enabled = cp.vl["POWERTRAIN_DATA"]['ACC_STATUS'] != 0
     ret.cruiseState.available = bool(main_on)
     ret.cruiseState.nonAdaptive = self.cruise_mode != 0
@@ -308,6 +321,20 @@ class CarState(CarStateBase):
     if self.CP.carFingerprint in (CAR.PILOT, CAR.PILOT_2019, CAR.RIDGELINE):
       if ret.brake > 0.05:
         ret.brakePressed = True
+
+    if bool(main_on):
+      if self.prev_cruise_setting != 1: #1 == not LKAS button
+        if self.cruise_setting == 1: #LKAS button rising edge
+          if self.lkasEnabled:
+            self.lkasEnabled = False
+          else:
+            self.lkasEnabled = True
+            ret.cruiseState.enabled = True
+    else:
+      self.lkasEnabled = False
+
+    if self.lkasEnabled:
+      ret.cruiseState.enabled = True
 
     # TODO: discover the CAN msg that has the imperial unit bit for all other cars
     self.is_metric = not cp.vl["HUD_SETTING"]['IMPERIAL_UNIT'] if self.CP.carFingerprint in (CAR.CIVIC) else False

@@ -457,6 +457,7 @@ class CarInterface(CarInterfaceBase):
     ret.accOn = self.CS.accOn
     ret.leftBlinkerOn = self.CS.leftBlinkerOn
     ret.rightBlinkerOn = self.CS.rightBlinkerOn
+    ret.langeChangeEnabled = self.CS.langeChangeEnabled
 
     buttonEvents = []
 
@@ -496,8 +497,10 @@ class CarInterface(CarInterfaceBase):
 
     # events
     events = self.create_common_events(ret, pcm_enable=False)
-    if not self.CS.lkasEnabled:
+    if (self.CS.leftBlinkerOn or self.CS.rightBlinkerOn) or not self.CS.lkasEnabled:
       events.add(EventName.manualSteeringRequired)
+    if not self.CS.accOn:
+      events.add(EventName.manualLongitudinalRequired)
     if self.CS.brake_error:
       events.add(EventName.brakeUnavailable)
     if self.CS.brake_hold and self.CS.CP.openpilotLongitudinalControl:
@@ -546,9 +549,7 @@ class CarInterface(CarInterfaceBase):
       # do disable on LKAS button if ACC is disabled
       if b.type in [ButtonType.altButton1] and b.pressed:
         if not self.CS.lkasEnabled: #disabled LKAS
-          if self.CS.accOn:
-            events.add(EventName.buttonSoftCancel)
-          else:
+          if not self.CS.accOn:
             events.add(EventName.buttonCancel)
         else: #enabled LKAS
           if not self.CS.accOn:
@@ -557,9 +558,7 @@ class CarInterface(CarInterfaceBase):
 
       # do disable on button down
       if b.type == "cancel" and b.pressed:
-        if self.CS.lkasEnabled:
-          events.add(EventName.buttonSoftCancel)
-        else:
+        if not self.CS.lkasEnabled:
           events.add(EventName.buttonCancel)
 
     if self.CP.enableCruise:

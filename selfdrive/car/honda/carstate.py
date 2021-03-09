@@ -1,6 +1,7 @@
 from cereal import car
 from collections import defaultdict
 from common.numpy_fast import interp
+from common.params import Params
 from opendbc.can.can_define import CANDefine
 from opendbc.can.parser import CANParser
 from selfdrive.config import Conversions as CV
@@ -171,6 +172,7 @@ class CarState(CarStateBase):
     self.rightBlinkerOn = False
     self.accOn = False
     self.disengageByBrake = False
+    self.automaticLaneChange = Params().get('LaneChangeEnabled') == b'1'
 
     self.shifter_values = can_define.dv["GEARBOX"]["GEAR_SHIFTER"]
     self.steer_status_values = defaultdict(lambda: "UNKNOWN", can_define.dv["STEER_STATUS"]["STEER_STATUS"])
@@ -209,13 +211,6 @@ class CarState(CarStateBase):
                           cp.vl["DOORS_STATUS"]['DOOR_OPEN_RL'], cp.vl["DOORS_STATUS"]['DOOR_OPEN_RR']])
     ret.seatbeltUnlatched = bool(cp.vl["SEATBELT_STATUS"]['SEATBELT_DRIVER_LAMP'] or not cp.vl["SEATBELT_STATUS"]['SEATBELT_DRIVER_LATCHED'])
 
-    steer_status = self.steer_status_values[cp.vl["STEER_STATUS"]['STEER_STATUS']]
-    ret.steerError = steer_status not in ['NORMAL', 'NO_TORQUE_ALERT_1', 'NO_TORQUE_ALERT_2', 'LOW_SPEED_LOCKOUT', 'TMP_FAULT']
-    # NO_TORQUE_ALERT_2 can be caused by bump OR steering nudge from driver
-    self.steer_not_allowed = steer_status not in ['NORMAL', 'NO_TORQUE_ALERT_2']
-    # LOW_SPEED_LOCKOUT is not worth a warning
-    ret.steerWarning = steer_status not in ['NORMAL', 'LOW_SPEED_LOCKOUT', 'NO_TORQUE_ALERT_2']
-
     if not self.CP.openpilotLongitudinalControl:
       self.brake_error = 0
     else:
@@ -245,6 +240,14 @@ class CarState(CarStateBase):
 
     self.leftBlinkerOn = cp.vl["SCM_FEEDBACK"]['LEFT_BLINKER'] != 0
     self.rightBlinkerOn = cp.vl["SCM_FEEDBACK"]['RIGHT_BLINKER'] != 0
+
+    steer_status = self.steer_status_values[cp.vl["STEER_STATUS"]['STEER_STATUS']]
+    ret.steerError = steer_status not in ['NORMAL', 'NO_TORQUE_ALERT_1', 'NO_TORQUE_ALERT_2', 'LOW_SPEED_LOCKOUT', 'TMP_FAULT']
+    # NO_TORQUE_ALERT_2 can be caused by bump OR steering nudge from driver
+    self.steer_not_allowed = steer_status not in ['NORMAL', 'NO_TORQUE_ALERT_2']
+    # LOW_SPEED_LOCKOUT is not worth a warning
+    if self.automaticLaneChange or not (self.rightBlinkerOn or self.leftBlinkerOn):
+      ret.steerWarning = steer_status not in ['NORMAL', 'LOW_SPEED_LOCKOUT', 'NO_TORQUE_ALERT_2']
 
     self.brake_hold = cp.vl["VSA_STATUS"]['BRAKE_HOLD_ACTIVE']
 

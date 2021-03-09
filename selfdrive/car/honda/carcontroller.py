@@ -7,7 +7,9 @@ from selfdrive.car import create_gas_command
 from selfdrive.car.honda import hondacan
 from selfdrive.car.honda.values import CruiseButtons, CAR, VISUAL_HUD, HONDA_BOSCH, CarControllerParams
 from opendbc.can.packer import CANPacker
+from selfdrive.config import Conversions as CV
 
+LANE_CHANGE_SPEED_MIN = 45 * CV.MPH_TO_MS
 VisualAlert = car.CarControl.HUDControl.VisualAlert
 
 def actuator_hystereses(brake, braking, brake_steady, v_ego, car_fingerprint):
@@ -113,8 +115,9 @@ class CarController():
       hud_car = 0
 
     fcw_display, steer_required, acc_alert = process_hud_alert(hud_alert)
-
-    lkas_active = enabled and not CS.steer_not_allowed and CS.lkasEnabled and not (CS.leftBlinkerOn or CS.rightBlinkerOn)
+    
+    below_lane_change_speed = CS.out.vEgo < LANE_CHANGE_SPEED_MIN
+    lkas_active = enabled and not CS.steer_not_allowed and CS.lkasEnabled and ((CS.automaticLaneChange not below_lane_change_speed) or not (CS.leftBlinkerOn or CS.rightBlinkerOn))
 
     hud = HUDData(int(pcm_accel), int(round(hud_v_cruise)), hud_car,
                   hud_show_lanes and lkas_active, fcw_display, acc_alert, steer_required, CS.lkasEnabled and not lkas_active)

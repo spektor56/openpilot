@@ -117,7 +117,7 @@ class CarController():
     fcw_display, steer_required, acc_alert = process_hud_alert(hud_alert)
     
     below_lane_change_speed = CS.out.vEgo < LANE_CHANGE_SPEED_MIN
-    lkas_active = enabled and not CS.steer_not_allowed and CS.lkasEnabled and ((CS.automaticLaneChange not below_lane_change_speed) or not (CS.leftBlinkerOn or CS.rightBlinkerOn))
+    lkas_active = enabled and not CS.steer_not_allowed and CS.lkasEnabled and ((CS.automaticLaneChange and not below_lane_change_speed) or not (CS.leftBlinkerOn or CS.rightBlinkerOn))
 
     hud = HUDData(int(pcm_accel), int(round(hud_v_cruise)), hud_car,
                   hud_show_lanes and lkas_active, fcw_display, acc_alert, steer_required, CS.lkasEnabled and not lkas_active)

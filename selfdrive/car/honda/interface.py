@@ -457,7 +457,8 @@ class CarInterface(CarInterfaceBase):
     ret.accOn = self.CS.accOn
     ret.leftBlinkerOn = self.CS.leftBlinkerOn
     ret.rightBlinkerOn = self.CS.rightBlinkerOn
-    ret.langeChangeEnabled = self.CS.langeChangeEnabled
+    ret.automaticLaneChange = self.CS.automaticLaneChange
+    ret.belowLaneChangeSpeed = self.CS.belowLaneChangeSpeed
 
     buttonEvents = []
 
@@ -497,7 +498,7 @@ class CarInterface(CarInterfaceBase):
 
     # events
     events = self.create_common_events(ret, pcm_enable=False)
-    if (self.CS.leftBlinkerOn or self.CS.rightBlinkerOn) or not self.CS.lkasEnabled:
+    if ((not self.CS.automaticLaneChange or self.CS.belowLaneChangeSpeed) and (self.CS.leftBlinkerOn or self.CS.rightBlinkerOn)) or not self.CS.lkasEnabled:
       events.add(EventName.manualSteeringRequired)
     if not self.CS.accOn:
       events.add(EventName.manualLongitudinalRequired)

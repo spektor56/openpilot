@@ -172,6 +172,7 @@ class CarState(CarStateBase):
     self.rightBlinkerOn = False
     self.accOn = False
     self.disengageByBrake = False
+    self.belowLaneChangeSpeed = True
     self.automaticLaneChange = Params().get('LaneChangeEnabled') == b'1'
 
     self.shifter_values = can_define.dv["GEARBOX"]["GEAR_SHIFTER"]
@@ -228,6 +229,8 @@ class CarState(CarStateBase):
     v_weight = interp(v_wheel, v_weight_bp, v_weight_v)
     ret.vEgoRaw = (1. - v_weight) * cp.vl["ENGINE_DATA"]['XMISSION_SPEED'] * CV.KPH_TO_MS * speed_factor + v_weight * v_wheel
     ret.vEgo, ret.aEgo = self.update_speed_kf(ret.vEgoRaw)
+    
+    self.belowLaneChangeSpeed = ret.vEgo < (45 * CV.MPH_TO_MS)
 
     ret.steeringAngleDeg = cp.vl["STEERING_SENSORS"]['STEER_ANGLE']
     ret.steeringRateDeg = cp.vl["STEERING_SENSORS"]['STEER_ANGLE_RATE']
@@ -246,7 +249,7 @@ class CarState(CarStateBase):
     # NO_TORQUE_ALERT_2 can be caused by bump OR steering nudge from driver
     self.steer_not_allowed = steer_status not in ['NORMAL', 'NO_TORQUE_ALERT_2']
     # LOW_SPEED_LOCKOUT is not worth a warning
-    if self.automaticLaneChange or not (self.rightBlinkerOn or self.leftBlinkerOn):
+    if (self.automaticLaneChange and not self.belowLaneChangeSpeed) or not (self.rightBlinkerOn or self.leftBlinkerOn):
       ret.steerWarning = steer_status not in ['NORMAL', 'LOW_SPEED_LOCKOUT', 'NO_TORQUE_ALERT_2']
 
     self.brake_hold = cp.vl["VSA_STATUS"]['BRAKE_HOLD_ACTIVE']

@@ -499,7 +499,7 @@ class CarInterface(CarInterfaceBase):
     events = self.create_common_events(ret, pcm_enable=False)
     if ((not self.CS.automaticLaneChange or self.CS.belowLaneChangeSpeed) and (self.CS.leftBlinkerOn or self.CS.rightBlinkerOn)) or not self.CS.lkasEnabled:
       events.add(EventName.manualSteeringRequired)
-    if not self.CS.cruiseState.enabled:
+    if not ret.cruiseState.enabled:
       events.add(EventName.manualLongitudinalRequired)
     if self.CS.brake_error:
       events.add(EventName.brakeUnavailable)

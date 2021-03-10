@@ -115,8 +115,9 @@ class CarController():
     fcw_display, steer_required, acc_alert = process_hud_alert(hud_alert)
     
     lkas_active = enabled and not CS.steer_not_allowed and CS.lkasEnabled and ((CS.automaticLaneChange and not CS.belowLaneChangeSpeed) or not (CS.leftBlinkerOn or CS.rightBlinkerOn))
-
-    hud = HUDData(int(pcm_accel), int(round(hud_v_cruise)), hud_car,
+    
+    enabled and CS.out.cruiseState.enabled
+    hud = HUDData(int(pcm_accel), (int(round(hud_v_cruise)) if hud_car != 0 else 0), hud_car,
                   hud_show_lanes and lkas_active, fcw_display, acc_alert, steer_required, CS.lkasEnabled and not lkas_active)
 
     # **** process the car messages ****

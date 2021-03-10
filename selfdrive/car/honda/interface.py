@@ -504,7 +504,12 @@ class CarInterface(CarInterfaceBase):
     if self.CS.brake_error:
       events.add(EventName.brakeUnavailable)
     if self.CS.brake_hold and self.CS.CP.openpilotLongitudinalControl:
-      events.add(EventName.brakeHold)
+      if (self.CS.lkasEnabled):
+        self.CS.disengageByBrake = True
+      if (cs_out.cruiseState.enabled):
+        events.add(EventName.brakeHold)
+      else:
+        events.add(EventName.silentBrakeHold)
     if self.CS.park_brake:
       events.add(EventName.parkBrake)
 
@@ -530,12 +535,12 @@ class CarInterface(CarInterfaceBase):
     enable_pressed = False
     enable_from_brake = False
 
-    if self.CS.disengageByBrake and not ret.brakePressed and self.CS.lkasEnabled:
+    if self.CS.disengageByBrake and not ret.brakePressed and not self.CS.brake_hold and self.CS.lkasEnabled:
       self.last_enable_pressed = cur_time
       enable_pressed = True
       enable_from_brake = True
 
-    if not ret.brakePressed:
+    if not ret.brakePressed and not self.CS.brake_hold:
       self.CS.disengageByBrake = False
       ret.disengageByBrake = False
 

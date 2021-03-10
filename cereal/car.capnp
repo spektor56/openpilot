@@ -106,6 +106,7 @@ struct CarEvent @0x9b1657f34caf3ad3 {
     manualLongitudinalRequired @97;
     silentPedalPressed @98;
     silentButtonEnable @99;
+    silentBrakeHold @100;
 
     radarCanErrorDEPRECATED @15;
     radarCommIssueDEPRECATED @67;

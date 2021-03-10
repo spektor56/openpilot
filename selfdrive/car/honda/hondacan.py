@@ -123,7 +123,7 @@ def create_ui_commands(packer, pcm_speed, hud, car_fingerprint, is_metric, idx, 
         'PCM_GAS': hud.pcm_accel,
         'CRUISE_SPEED': hud.v_cruise,
         'ENABLE_MINI_CAR': 1,
-        'HUD_LEAD': hud.car,
+        'HUD_LEAD': 3 if hud.car == 0 else hud.car,
         'HUD_DISTANCE': 3,    # max distance setting on display
         'IMPERIAL_UNIT': int(not is_metric),
         'SET_ME_X01_2': 1,

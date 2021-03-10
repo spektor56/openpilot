@@ -110,7 +110,7 @@ class CarController():
       else:
         hud_car = 1
     else:
-      hud_car = 0
+      hud_car = 3
 
     fcw_display, steer_required, acc_alert = process_hud_alert(hud_alert)
     

@@ -569,7 +569,7 @@ class CarInterface(CarInterfaceBase):
       # TODO: button press should be the only thing that triggers enable
       if ((cur_time - self.last_enable_pressed) < 0.2 and
           (cur_time - self.last_enable_sent) > 0.2 and
-          ret.cruiseState.enabled) or \
+          (ret.cruiseState.enabled or self.CS.lkasEnabled)) or \
          (enable_pressed and events.any(ET.NO_ENTRY)):
         if enable_from_brake:
           events.add(EventName.silentButtonEnable)

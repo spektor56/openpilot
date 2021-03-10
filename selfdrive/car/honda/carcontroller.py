@@ -104,7 +104,7 @@ class CarController():
     # *** rate limit after the enable check ***
     self.brake_last = rate_limit(brake, self.brake_last, -2., DT_CTRL)
 
-    if enabled:
+    if enabled and CS.out.cruiseState.enabled:
       if hud_show_car:
         hud_car = 2
       else:
@@ -113,10 +113,11 @@ class CarController():
       hud_car = 0
 
     fcw_display, steer_required, acc_alert = process_hud_alert(hud_alert)
-
-    lkas_active = enabled and not CS.steer_not_allowed and CS.lkasEnabled and not (CS.leftBlinkerOn or CS.rightBlinkerOn)
-
-    hud = HUDData(int(pcm_accel), int(round(hud_v_cruise)), hud_car,
+    
+    lkas_active = enabled and not CS.steer_not_allowed and CS.lkasEnabled and ((CS.automaticLaneChange and not CS.belowLaneChangeSpeed) or not (CS.leftBlinkerOn or CS.rightBlinkerOn))
+    
+    enabled and CS.out.cruiseState.enabled
+    hud = HUDData(int(pcm_accel), (int(round(hud_v_cruise)) if hud_car != 0 else 0), hud_car,
                   hud_show_lanes and lkas_active, fcw_display, acc_alert, steer_required, CS.lkasEnabled and not lkas_active)
 
     # **** process the car messages ****
@@ -156,7 +157,11 @@ class CarController():
           pass # TODO: implement
         else:
           apply_gas = clip(actuators.gas, 0., 1.)
+          if not CS.out.cruiseState.enabled:
+            apply_gas = 0.
           apply_brake = int(clip(self.brake_last * P.BRAKE_MAX, 0, P.BRAKE_MAX - 1))
+          if not CS.out.cruiseState.enabled:
+            apply_brake = 0
           pump_on, self.last_pump_ts = brake_pump_hysteresis(apply_brake, self.apply_brake_last, self.last_pump_ts, ts)
           can_sends.append(hondacan.create_brake_command(self.packer, apply_brake, pump_on,
             pcm_override, pcm_cancel_cmd, hud.fcw, idx, CS.CP.carFingerprint, CS.stock_brake))

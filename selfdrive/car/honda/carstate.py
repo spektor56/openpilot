@@ -1,6 +1,7 @@
 from cereal import car
 from collections import defaultdict
 from common.numpy_fast import interp
+from common.params import Params
 from opendbc.can.can_define import CANDefine
 from opendbc.can.parser import CANParser
 from selfdrive.config import Conversions as CV
@@ -169,8 +170,9 @@ class CarState(CarStateBase):
     self.lkasEnabled = False
     self.leftBlinkerOn = False
     self.rightBlinkerOn = False
-    self.accOn = False
     self.disengageByBrake = False
+    self.belowLaneChangeSpeed = True
+    self.automaticLaneChange = Params().get('LaneChangeEnabled') == b'1'
 
     self.shifter_values = can_define.dv["GEARBOX"]["GEAR_SHIFTER"]
     self.steer_status_values = defaultdict(lambda: "UNKNOWN", can_define.dv["STEER_STATUS"]["STEER_STATUS"])
@@ -209,13 +211,6 @@ class CarState(CarStateBase):
                           cp.vl["DOORS_STATUS"]['DOOR_OPEN_RL'], cp.vl["DOORS_STATUS"]['DOOR_OPEN_RR']])
     ret.seatbeltUnlatched = bool(cp.vl["SEATBELT_STATUS"]['SEATBELT_DRIVER_LAMP'] or not cp.vl["SEATBELT_STATUS"]['SEATBELT_DRIVER_LATCHED'])
 
-    steer_status = self.steer_status_values[cp.vl["STEER_STATUS"]['STEER_STATUS']]
-    ret.steerError = steer_status not in ['NORMAL', 'NO_TORQUE_ALERT_1', 'NO_TORQUE_ALERT_2', 'LOW_SPEED_LOCKOUT', 'TMP_FAULT']
-    # NO_TORQUE_ALERT_2 can be caused by bump OR steering nudge from driver
-    self.steer_not_allowed = steer_status not in ['NORMAL', 'NO_TORQUE_ALERT_2']
-    # LOW_SPEED_LOCKOUT is not worth a warning
-    ret.steerWarning = steer_status not in ['NORMAL', 'LOW_SPEED_LOCKOUT', 'NO_TORQUE_ALERT_2']
-
     if not self.CP.openpilotLongitudinalControl:
       self.brake_error = 0
     else:
@@ -233,6 +228,16 @@ class CarState(CarStateBase):
     v_weight = interp(v_wheel, v_weight_bp, v_weight_v)
     ret.vEgoRaw = (1. - v_weight) * cp.vl["ENGINE_DATA"]['XMISSION_SPEED'] * CV.KPH_TO_MS * speed_factor + v_weight * v_wheel
     ret.vEgo, ret.aEgo = self.update_speed_kf(ret.vEgoRaw)
+    
+    self.belowLaneChangeSpeed = ret.vEgo < (45 * CV.MPH_TO_MS)
+
+    steer_status = self.steer_status_values[cp.vl["STEER_STATUS"]['STEER_STATUS']]
+    ret.steerError = steer_status not in ['NORMAL', 'NO_TORQUE_ALERT_1', 'NO_TORQUE_ALERT_2', 'LOW_SPEED_LOCKOUT', 'TMP_FAULT']
+    # NO_TORQUE_ALERT_2 can be caused by bump OR steering nudge from driver
+    self.steer_not_allowed = steer_status not in ['NORMAL', 'NO_TORQUE_ALERT_2']
+    # LOW_SPEED_LOCKOUT is not worth a warning
+    if (self.automaticLaneChange and not self.belowLaneChangeSpeed) or not (self.rightBlinkerOn or self.leftBlinkerOn):
+      ret.steerWarning = steer_status not in ['NORMAL', 'LOW_SPEED_LOCKOUT', 'NO_TORQUE_ALERT_2']
 
     ret.steeringAngleDeg = cp.vl["STEERING_SENSORS"]['STEER_ANGLE']
     ret.steeringRateDeg = cp.vl["STEERING_SENSORS"]['STEER_ANGLE_RATE']
@@ -241,7 +246,7 @@ class CarState(CarStateBase):
     self.cruise_buttons = cp.vl["SCM_BUTTONS"]['CRUISE_BUTTONS']
 
     ret.leftBlinker = cp.vl["SCM_FEEDBACK"]['LEFT_BLINKER'] != 0
-    ret.rightBlinker = cp.vl["SCM_FEEDBACK"]['RIGHT_BLINKER'] != 0
+    ret.rightBlinker = cp.vl["SCM_FEEDBACK"]['RIGHT_BLINKER'] != 0 
 
     self.leftBlinkerOn = cp.vl["SCM_FEEDBACK"]['LEFT_BLINKER'] != 0
     self.rightBlinkerOn = cp.vl["SCM_FEEDBACK"]['RIGHT_BLINKER'] != 0
@@ -312,7 +317,6 @@ class CarState(CarStateBase):
 
     ret.brake = cp.vl["VSA_STATUS"]['USER_BRAKE']
 
-    self.accOn = cp.vl["POWERTRAIN_DATA"]['ACC_STATUS'] != 0
     ret.cruiseState.enabled = cp.vl["POWERTRAIN_DATA"]['ACC_STATUS'] != 0
     ret.cruiseState.available = bool(main_on)
     ret.cruiseState.nonAdaptive = self.cruise_mode != 0
@@ -325,16 +329,9 @@ class CarState(CarStateBase):
     if bool(main_on):
       if self.prev_cruise_setting != 1: #1 == not LKAS button
         if self.cruise_setting == 1: #LKAS button rising edge
-          if self.lkasEnabled:
-            self.lkasEnabled = False
-          else:
-            self.lkasEnabled = True
-            ret.cruiseState.enabled = True
+          self.lkasEnabled = not self.lkasEnabled
     else:
       self.lkasEnabled = False
-
-    if self.lkasEnabled:
-      ret.cruiseState.enabled = True
 
     # TODO: discover the CAN msg that has the imperial unit bit for all other cars
     self.is_metric = not cp.vl["HUD_SETTING"]['IMPERIAL_UNIT'] if self.CP.carFingerprint in (CAR.CIVIC) else False

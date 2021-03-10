@@ -460,6 +460,14 @@ EVENTS: Dict[int, Dict[str, Union[Alert, Callable[[Any, messaging.SubMaster, boo
       Priority.LOW, VisualAlert.none, AudibleAlert.none, .0, .1, .1),
   },
 
+  EventName.manualLongitudinalRequired: {
+    ET.WARNING: Alert(
+      "Adaptive Cruise Control is OFF",
+      "Manual Gas/Brakes Required",
+      AlertStatus.normal, AlertSize.mid,
+      Priority.LOW, VisualAlert.none, AudibleAlert.none, .0, .1, .1),
+  },
+
   EventName.steerSaturated: {
     ET.WARNING: Alert(
       "TAKE CONTROL",
@@ -504,14 +512,6 @@ EVENTS: Dict[int, Dict[str, Union[Alert, Callable[[Any, messaging.SubMaster, boo
 
   EventName.buttonCancel: {
     ET.USER_DISABLE: EngagementAlert(AudibleAlert.chimeDisengage),
-  },
-
-  EventName.buttonSoftCancel: {
-    ET.WARNING: Alert(
-      "Adaptive Cruise Control is OFF",
-      "Manual Gas/Brakes Required",
-      AlertStatus.normal, AlertSize.mid,
-      Priority.LOW, VisualAlert.none, AudibleAlert.none, .0, .1, .1),
   },
 
   EventName.brakeHold: {

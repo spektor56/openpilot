@@ -103,7 +103,7 @@ struct CarEvent @0x9b1657f34caf3ad3 {
     processNotRunning @95;
 
     manualSteeringRequired @96;
-    buttonSoftCancel @97;
+    manualLongitudinalRequired @97;
     silentPedalPressed @98;
     silentButtonEnable @99;
 
@@ -185,10 +185,11 @@ struct CarState {
   clutchPressed @28 :Bool;
 
   lkasEnabled @37 :Bool;
-  accOn @38 :Bool;
-  leftBlinkerOn @39 :Bool;
-  rightBlinkerOn @40 :Bool;
-  disengageByBrake @41 :Bool;
+  leftBlinkerOn @38 :Bool;
+  rightBlinkerOn @39 :Bool;
+  disengageByBrake @40 :Bool;
+  automaticLaneChange @41 :Bool;
+  belowLaneChangeSpeed @42 :Bool;
 
   # which packets this state came from
   canMonoTimes @12: List(UInt64);

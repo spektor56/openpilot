@@ -497,10 +497,10 @@ class CarInterface(CarInterfaceBase):
 
     # events
     events = self.create_common_events(ret, pcm_enable=False)
-    if ((not self.CS.automaticLaneChange or self.CS.belowLaneChangeSpeed) and (self.CS.leftBlinkerOn or self.CS.rightBlinkerOn)) or not self.CS.lkasEnabled:
-      events.add(EventName.manualSteeringRequired)
-    if not ret.cruiseState.enabled:
-      events.add(EventName.manualLongitudinalRequired)
+    #if ((not self.CS.automaticLaneChange or self.CS.belowLaneChangeSpeed) and (self.CS.leftBlinkerOn or self.CS.rightBlinkerOn)) or not self.CS.lkasEnabled:
+      #events.add(EventName.manualSteeringRequired)
+    #if not ret.cruiseState.enabled:
+      #events.add(EventName.manualLongitudinalRequired)
     if self.CS.brake_error:
       events.add(EventName.brakeUnavailable)
     if self.CS.brake_hold and self.CS.CP.openpilotLongitudinalControl:
@@ -552,6 +552,8 @@ class CarInterface(CarInterfaceBase):
         if not self.CS.lkasEnabled: #disabled LKAS
           if not ret.cruiseState.enabled:
             events.add(EventName.buttonCancel)
+          else:
+            events.add(EventName.manualSteeringRequired)
         else: #enabled LKAS
           if not ret.cruiseState.enabled:
             self.last_enable_pressed = cur_time
@@ -561,6 +563,8 @@ class CarInterface(CarInterfaceBase):
       if b.type == "cancel" and b.pressed:
         if not self.CS.lkasEnabled:
           events.add(EventName.buttonCancel)
+        else:
+          events.add(EventName.manualLongitudinalRequired)
 
     if self.CP.enableCruise:
       # KEEP THIS EVENT LAST! send enable event if button is pressed and there are

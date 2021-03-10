@@ -329,7 +329,7 @@ class CarState(CarStateBase):
     if bool(main_on):
       if self.prev_cruise_setting != 1: #1 == not LKAS button
         if self.cruise_setting == 1: #LKAS button rising edge
-          self.lkasEnabled = not self.lkasEnabled:
+          self.lkasEnabled = not self.lkasEnabled
     else:
       self.lkasEnabled = False
 

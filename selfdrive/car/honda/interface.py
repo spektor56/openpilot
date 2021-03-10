@@ -454,7 +454,6 @@ class CarInterface(CarInterfaceBase):
                            c.actuators.brake > brakelights_threshold)
 
     ret.lkasEnabled = self.CS.lkasEnabled
-    ret.accOn = self.CS.accOn
     ret.leftBlinkerOn = self.CS.leftBlinkerOn
     ret.rightBlinkerOn = self.CS.rightBlinkerOn
     ret.automaticLaneChange = self.CS.automaticLaneChange
@@ -500,7 +499,7 @@ class CarInterface(CarInterfaceBase):
     events = self.create_common_events(ret, pcm_enable=False)
     if ((not self.CS.automaticLaneChange or self.CS.belowLaneChangeSpeed) and (self.CS.leftBlinkerOn or self.CS.rightBlinkerOn)) or not self.CS.lkasEnabled:
       events.add(EventName.manualSteeringRequired)
-    if not self.CS.accOn:
+    if not self.CS.cruiseState.enabled:
       events.add(EventName.manualLongitudinalRequired)
     if self.CS.brake_error:
       events.add(EventName.brakeUnavailable)
@@ -516,13 +515,14 @@ class CarInterface(CarInterfaceBase):
 
     # it can happen that car cruise disables while comma system is enabled: need to
     # keep braking if needed or if the speed is very low
-    if self.CP.enableCruise and not ret.cruiseState.enabled \
-       and (c.actuators.brake <= 0. or not self.CP.openpilotLongitudinalControl):
+    #if self.CP.enableCruise and not ret.cruiseState.enabled \
+       #and (c.actuators.brake <= 0. or not self.CP.openpilotLongitudinalControl):
       # non loud alert if cruise disables below 25mph as expected (+ a little margin)
-      if ret.vEgo < self.CP.minEnableSpeed + 2.:
-        events.add(EventName.speedTooLow)
-      else:
-        events.add(EventName.cruiseDisabled)
+      #if ret.vEgo < self.CP.minEnableSpeed + 2.:
+        #events.add(EventName.speedTooLow)
+      #else:
+        #events.add(EventName.cruiseDisabled)
+
     if self.CS.CP.minEnableSpeed > 0 and ret.vEgo < 0.001:
       events.add(EventName.manualRestart)
 
@@ -550,10 +550,10 @@ class CarInterface(CarInterfaceBase):
       # do disable on LKAS button if ACC is disabled
       if b.type in [ButtonType.altButton1] and b.pressed:
         if not self.CS.lkasEnabled: #disabled LKAS
-          if not self.CS.accOn:
+          if not ret.cruiseState.enabled:
             events.add(EventName.buttonCancel)
         else: #enabled LKAS
-          if not self.CS.accOn:
+          if not ret.cruiseState.enabled:
             self.last_enable_pressed = cur_time
             enable_pressed = True
 

@@ -129,7 +129,6 @@ class CarInterfaceBase():
        (cs_out.brakePressed and (not self.CS.out.brakePressed or not cs_out.standstill)):
       if (cs_out.cruiseState.enabled):
         cs_out.disengageByBrake = True
-      if (cs_out.accOn):
         events.add(EventName.pedalPressed)
       else:
         events.add(EventName.silentPedalPressed)

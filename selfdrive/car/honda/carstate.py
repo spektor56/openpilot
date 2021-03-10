@@ -170,7 +170,6 @@ class CarState(CarStateBase):
     self.lkasEnabled = False
     self.leftBlinkerOn = False
     self.rightBlinkerOn = False
-    self.accOn = False
     self.disengageByBrake = False
     self.belowLaneChangeSpeed = True
     self.automaticLaneChange = Params().get('LaneChangeEnabled') == b'1'
@@ -318,7 +317,6 @@ class CarState(CarStateBase):
 
     ret.brake = cp.vl["VSA_STATUS"]['USER_BRAKE']
 
-    self.accOn = cp.vl["POWERTRAIN_DATA"]['ACC_STATUS'] != 0
     ret.cruiseState.enabled = cp.vl["POWERTRAIN_DATA"]['ACC_STATUS'] != 0
     ret.cruiseState.available = bool(main_on)
     ret.cruiseState.nonAdaptive = self.cruise_mode != 0
@@ -331,16 +329,9 @@ class CarState(CarStateBase):
     if bool(main_on):
       if self.prev_cruise_setting != 1: #1 == not LKAS button
         if self.cruise_setting == 1: #LKAS button rising edge
-          if self.lkasEnabled:
-            self.lkasEnabled = False
-          else:
-            self.lkasEnabled = True
-            ret.cruiseState.enabled = True
+          self.lkasEnabled = not self.lkasEnabled:
     else:
       self.lkasEnabled = False
-
-    if self.lkasEnabled:
-      ret.cruiseState.enabled = True
 
     # TODO: discover the CAN msg that has the imperial unit bit for all other cars
     self.is_metric = not cp.vl["HUD_SETTING"]['IMPERIAL_UNIT'] if self.CP.carFingerprint in (CAR.CIVIC) else False

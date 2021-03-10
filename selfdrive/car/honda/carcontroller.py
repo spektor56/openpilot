@@ -104,7 +104,7 @@ class CarController():
     # *** rate limit after the enable check ***
     self.brake_last = rate_limit(brake, self.brake_last, -2., DT_CTRL)
 
-    if enabled:
+    if enabled and CS.out.cruiseState.enabled:
       if hud_show_car:
         hud_car = 2
       else:

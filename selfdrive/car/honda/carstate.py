@@ -167,6 +167,7 @@ class CarState(CarStateBase):
     super().__init__(CP)
     can_define = CANDefine(DBC[CP.carFingerprint]['pt'])
 
+    self.accEnabled = False
     self.lkasEnabled = False
     self.leftBlinkerOn = False
     self.rightBlinkerOn = False
@@ -327,11 +328,23 @@ class CarState(CarStateBase):
         ret.brakePressed = True
 
     if bool(main_on):
+      if self.CP.enableGasInterceptor:
+        if self.prev_cruise_buttons == 3: #set
+          if self.cruise_buttons != 3:
+            self.accEnabled = True     
+
       if self.prev_cruise_setting != 1: #1 == not LKAS button
         if self.cruise_setting == 1: #LKAS button rising edge
           self.lkasEnabled = not self.lkasEnabled
     else:
       self.lkasEnabled = False
+      self.accEnabled = False
+
+    if self.CP.enableGasInterceptor:
+      if self.prev_cruise_buttons != 2: #cancel
+        if self.cruise_buttons == 2:
+          self.accEnabled = False   
+      ret.cruiseState.enabled = self.accEnabled
 
     # TODO: discover the CAN msg that has the imperial unit bit for all other cars
     self.is_metric = not cp.vl["HUD_SETTING"]['IMPERIAL_UNIT'] if self.CP.carFingerprint in (CAR.CIVIC) else False

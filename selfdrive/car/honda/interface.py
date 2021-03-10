@@ -454,6 +454,7 @@ class CarInterface(CarInterfaceBase):
                            c.actuators.brake > brakelights_threshold)
 
     ret.lkasEnabled = self.CS.lkasEnabled
+    ret.accEnabled = self.CS.accEnabled
     ret.leftBlinkerOn = self.CS.leftBlinkerOn
     ret.rightBlinkerOn = self.CS.rightBlinkerOn
     ret.automaticLaneChange = self.CS.automaticLaneChange

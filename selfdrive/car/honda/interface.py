@@ -561,9 +561,10 @@ class CarInterface(CarInterfaceBase):
 
       # do disable on button down
       if b.type == "cancel" and b.pressed:
-        events.add(EventName.manualLongitudinalRequired)
         if not self.CS.lkasEnabled:
           events.add(EventName.buttonCancel)
+        else:
+          events.add(EventName.manualLongitudinalRequired)
 
     if self.CP.enableCruise:
       # KEEP THIS EVENT LAST! send enable event if button is pressed and there are

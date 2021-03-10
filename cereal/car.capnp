@@ -189,6 +189,7 @@ struct CarState {
   rightBlinkerOn @39 :Bool;
   disengageByBrake @40 :Bool;
   automaticLaneChange @41 :Bool;
+  belowLaneChangeSpeed @42 :Bool;
 
   # which packets this state came from
   canMonoTimes @12: List(UInt64);

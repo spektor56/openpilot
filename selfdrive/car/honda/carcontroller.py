@@ -72,7 +72,7 @@ def process_hud_alert(hud_alert):
 
 HUDData = namedtuple("HUDData",
                      ["pcm_accel", "v_cruise",  "car",
-                     "lanes", "fcw", "acc_alert", "steer_required"])
+                     "lanes", "fcw", "acc_alert", "steer_required", "dashed_lanes"])
 
 
 class CarController():
@@ -104,13 +104,7 @@ class CarController():
     # *** rate limit after the enable check ***
     self.brake_last = rate_limit(brake, self.brake_last, -2., DT_CTRL)
 
-    # vehicle hud display, wait for one update from 10Hz 0x304 msg
-    if hud_show_lanes:
-      hud_lanes = 1
-    else:
-      hud_lanes = 0
-
-    if enabled:
+    if enabled and CS.out.cruiseState.enabled:
       if hud_show_car:
         hud_car = 2
       else:
@@ -119,16 +113,17 @@ class CarController():
       hud_car = 0
 
     fcw_display, steer_required, acc_alert = process_hud_alert(hud_alert)
-
-    hud = HUDData(int(pcm_accel), int(round(hud_v_cruise)), hud_car,
-                  hud_lanes, fcw_display, acc_alert, steer_required)
+    
+    lkas_active = enabled and not CS.steer_not_allowed and CS.lkasEnabled and ((CS.automaticLaneChange and not CS.belowLaneChangeSpeed) or not (CS.leftBlinkerOn or CS.rightBlinkerOn))
+    
+    enabled and CS.out.cruiseState.enabled
+    hud = HUDData(int(pcm_accel), (int(round(hud_v_cruise)) if hud_car != 0 else 255), hud_car,
+                  hud_show_lanes and lkas_active, fcw_display, acc_alert, steer_required, CS.lkasEnabled and not lkas_active)
 
     # **** process the car messages ****
 
     # steer torque is converted back to CAN reference (positive when steering right)
     apply_steer = int(interp(-actuators.steer * P.STEER_MAX, P.STEER_LOOKUP_BP, P.STEER_LOOKUP_V))
-
-    lkas_active = enabled and not CS.steer_not_allowed
 
     # Send CAN commands.
     can_sends = []
@@ -162,7 +157,11 @@ class CarController():
           pass # TODO: implement
         else:
           apply_gas = clip(actuators.gas, 0., 1.)
+          if not CS.out.cruiseState.enabled:
+            apply_gas = 0.
           apply_brake = int(clip(self.brake_last * P.BRAKE_MAX, 0, P.BRAKE_MAX - 1))
+          if not CS.out.cruiseState.enabled:
+            apply_brake = 0
           pump_on, self.last_pump_ts = brake_pump_hysteresis(apply_brake, self.apply_brake_last, self.last_pump_ts, ts)
           can_sends.append(hondacan.create_brake_command(self.packer, apply_brake, pump_on,
             pcm_override, pcm_cancel_cmd, hud.fcw, idx, CS.CP.carFingerprint, CS.stock_brake))

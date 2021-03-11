@@ -498,16 +498,12 @@ class CarInterface(CarInterfaceBase):
 
     # events
     events = self.create_common_events(ret, pcm_enable=False)
-    #if ((not self.CS.automaticLaneChange or self.CS.belowLaneChangeSpeed) and (self.CS.leftBlinkerOn or self.CS.rightBlinkerOn)) or not self.CS.lkasEnabled:
-      #events.add(EventName.manualSteeringRequired)
-    #if not ret.cruiseState.enabled:
-      #events.add(EventName.manualLongitudinalRequired)
     if self.CS.brake_error:
       events.add(EventName.brakeUnavailable)
     if self.CS.brake_hold and self.CS.CP.openpilotLongitudinalControl:
       if (self.CS.lkasEnabled):
         self.CS.disengageByBrake = True
-      if (cs_out.cruiseState.enabled):
+      if (ret.cruiseState.enabled):
         events.add(EventName.brakeHold)
       else:
         events.add(EventName.silentBrakeHold)
@@ -521,13 +517,13 @@ class CarInterface(CarInterfaceBase):
 
     # it can happen that car cruise disables while comma system is enabled: need to
     # keep braking if needed or if the speed is very low
-    #if self.CP.enableCruise and not ret.cruiseState.enabled \
-       #and (c.actuators.brake <= 0. or not self.CP.openpilotLongitudinalControl):
-      # non loud alert if cruise disables below 25mph as expected (+ a little margin)
-      #if ret.vEgo < self.CP.minEnableSpeed + 2.:
-        #events.add(EventName.speedTooLow)
-      #else:
-        #events.add(EventName.cruiseDisabled)
+    if self.CP.enableCruise and (not ret.cruiseState.enabled and not self.CS.lkasEnabled) \
+       and (c.actuators.brake <= 0. or not self.CP.openpilotLongitudinalControl):
+       #non loud alert if cruise disables below 25mph as expected (+ a little margin)
+      if ret.vEgo < self.CP.minEnableSpeed + 2.:
+        events.add(EventName.speedTooLow)
+      else:
+        events.add(EventName.cruiseDisabled)
 
     if self.CS.CP.minEnableSpeed > 0 and ret.vEgo < 0.001:
       events.add(EventName.manualRestart)
